@@ -111,6 +111,27 @@ void local_coefficients(const Model model, const Parameters& p, const double c, 
             (e + s * sqrt(pi) * c * (1.0 + erf_term));
     return;
   }
+  if (model == Model::CLL) {
+    // ADBSat-PyVersion calc/coeff_CLL.py, one species. x = s cos(delta).
+    // Back-facing panels keep their (thermal) contribution, as in the Python code.
+    const double x = s * c;
+    const double g1 = (x * e + 0.5 * sqrt(pi) * (1.0 + 2.0 * x * x) * (1.0 + erf_term)) / sqrt(pi);
+    const double g2 = (e + sqrt(pi) * x * (1.0 + erf_term)) / sqrt(pi);
+    const double tr = p.wall_temperature / p.freestream_temperature;
+    const double an = p.alpha_n;
+    if (an < 1.0) {
+      const double am = fmax(0.0, 1.0 - an);
+      cp = ((1.0 + sqrt(am)) * g1 +
+            0.5 * (exp(-p.cll_beta * pow(am, p.cll_gamma)) * pow(tr, p.cll_delta) * (p.cll_zeta / s)) *
+              sqrt(tr) * sqrt(pi) * g2) / (s * s);
+      ctau = p.sigma_t * sn / s * g2;
+    } else {
+      cp = (((2.0 - an) * s / sqrt(pi) * c + 0.5 * an * sqrt(tr)) * e +
+            ((2.0 - an) * (0.5 + x * x) + 0.5 * an * sqrt(tr) * sqrt(pi) * x) * (1.0 + erf_term)) / (s * s);
+      ctau = p.sigma_t * sn / (s * sqrt(pi)) * (e + s * sqrt(pi) * c * (1.0 + erf_term));
+    }
+    return;
+  }
   if (model == Model::Sentman) {
     const double ti = 0.5 * s * s * p.freestream_temperature;
     const double thermal = sqrt(fmax(0.0, 0.5 * (1.0 + p.alpha * (p.wall_temperature / ti - 1.0))));
@@ -161,6 +182,7 @@ Model parse_model(const std::string& name) {
   if (name == "Sentman") return Model::Sentman;
   if (name == "StorchHyp") return Model::StorchHyp;
   if (name == "DRIA") return Model::DRIA;
+  if (name == "CLL") return Model::CLL;
   throw std::invalid_argument("unsupported GSI model: " + name);
 }
 
@@ -170,6 +192,7 @@ const char* model_name(Model model) {
     case Model::Maxwell: return "Maxwell"; case Model::PICLasMaxwell: return "PICLasMaxwell";
     case Model::Schaaf: return "Schaaf"; case Model::Sentman: return "Sentman";
     case Model::StorchHyp: return "StorchHyp"; case Model::DRIA: return "DRIA";
+    case Model::CLL: return "CLL";
   }
   return "Unknown";
 }

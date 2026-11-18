@@ -8,7 +8,7 @@
 
 namespace adbsat {
 
-enum class Model { Newton, Cook, Maxwell, PICLasMaxwell, Schaaf, Sentman, StorchHyp, DRIA };
+enum class Model { Newton, Cook, Maxwell, PICLasMaxwell, Schaaf, Sentman, StorchHyp, DRIA, CLL };
 
 Model parse_model(const std::string& name);
 const char* model_name(Model model);
@@ -25,6 +25,14 @@ struct Parameters {
   double speed_ratio = 7.0;
   double freestream_velocity = 7500.0;
   double mean_specific_gas_constant = 296.8;
+  // CLL (Walker et al. 2014 closed form, single species), as in ADBSat-PyVersion
+  // calc/coeff_CLL.py. alpha_n: normal-energy accommodation; sigma_t (above):
+  // tangential-momentum accommodation. Fit constants default to atomic oxygen.
+  double alpha_n = 0.9;
+  double cll_beta = 5.85;
+  double cll_gamma = 0.2;
+  double cll_delta = 0.48;
+  double cll_zeta = 31.0;
   double reference_area = 1.0;
   double reference_length = 1.0;
   bool enable_shadowing = false;

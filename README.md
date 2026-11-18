@@ -16,13 +16,15 @@ first. Set `-DADBSAT_FETCH_KOKKOS=OFF` for fully offline/system-package builds.
 
 - persistent device-resident panel area, normal and centroid data;
 - one fused Kokkos panel kernel plus force/moment reduction;
-- Newton, Cook, Maxwell, PICLasMaxwell, Schaaf, Sentman, StorchHyp and a
-  scalar-mixture DRIA approximation;
+- Newton, Cook, Maxwell, PICLasMaxwell, Schaaf, Sentman, StorchHyp, a
+  scalar-mixture DRIA approximation, and single-species CLL (Walker et al. 2014
+  closed form as in `calc/coeff_CLL.py`; fit constants default to atomic oxygen);
 - optional pressure/shear coefficient copy-back;
 - exact BVH-accelerated ray/triangle shadowing on HIP, CUDA or OpenMP;
 - CSV/JSON command-line interface, correctness tests and synchronized benchmark.
 
-Not yet parity-complete with the Python application: CLL's six-species mixture,
+Not yet parity-complete with the Python application: CLL's six-species mixture
+(single-species CLL matches the Python values to 6e-16 on convex Cylinder-Hex meshes),
 solar pressure, MAT input/output, per-panel material
 properties, and the atmosphere/campaign orchestration remain in Python. DRIA
 currently uses mean-gas properties rather than the Python eight-species sum.
@@ -48,7 +50,11 @@ the nine triangle vertex coordinates `v0x,...,v2z`:
 ```bash
 build-hip/adbsat-cli panels.csv Sentman -1 0 0 20
 build-hip/adbsat-cli panels-with-vertices.csv Sentman -1 0 0 20 shadow
+build-hip/adbsat-cli panels.csv CLL -1 0 0 1 noshadow alpha_n=0.8 sigma_t=0.9 speed_ratio=7.72 \
+    wall_temperature=300 freestream_temperature=961 reference_area=0.0069
 ```
+
+Optional `KEY=VALUE` arguments set model parameters (see `adbsat-cli` usage).
 
 The result is one JSON object containing backend, timings, `C_D`, `C_L`, `C_Y`,
 `Cf_g`, and `Cm_g`. Geometry is copied once by `Solver`; repeated `compute()`

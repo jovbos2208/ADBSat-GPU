@@ -1,4 +1,5 @@
 #include "adbsat/core.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -28,20 +29,50 @@ static std::vector<adbsat::PanelHost> read_csv(const std::string& path) {
   return panels;
 }
 
+// Optional KEY=VALUE arguments (any position after MODEL) set model parameters.
+static void apply_option(adbsat::Parameters& p, const std::string& arg) {
+  const auto eq = arg.find('=');
+  const std::string key = arg.substr(0, eq);
+  const double v = std::stod(arg.substr(eq + 1));
+  if (key == "alpha_n") p.alpha_n = v;
+  else if (key == "sigma_t") p.sigma_t = v;
+  else if (key == "sigma_n") p.sigma_n = v;
+  else if (key == "alpha") p.alpha = v;
+  else if (key == "speed_ratio") p.speed_ratio = v;
+  else if (key == "wall_temperature") p.wall_temperature = v;
+  else if (key == "freestream_temperature") p.freestream_temperature = v;
+  else if (key == "freestream_velocity") p.freestream_velocity = v;
+  else if (key == "reference_area") p.reference_area = v;
+  else if (key == "reference_length") p.reference_length = v;
+  else if (key == "cll_beta") p.cll_beta = v;
+  else if (key == "cll_gamma") p.cll_gamma = v;
+  else if (key == "cll_delta") p.cll_delta = v;
+  else if (key == "cll_zeta") p.cll_zeta = v;
+  else throw std::invalid_argument("unknown option: " + key);
+}
+
 int main(int argc, char** argv) {
   Kokkos::ScopeGuard guard(argc, argv);
   try {
-    if (argc < 3) {
-      std::cerr << "usage: adbsat-cli PANEL.csv MODEL [fx fy fz] [repetitions] [shadow]\n"
-                   "CSV: area,nx,ny,nz,cx,cy,cz[,v0x,v0y,v0z,v1x,v1y,v1z,v2x,v2y,v2z]\n";
+    std::vector<std::string> pos, opts;
+    for (int i = 1; i < argc; ++i) {
+      std::string a(argv[i]);
+      (a.find('=') != std::string::npos ? opts : pos).push_back(a);
+    }
+    if (pos.size() < 2) {
+      std::cerr << "usage: adbsat-cli PANEL.csv MODEL [fx fy fz] [repetitions] [shadow] [KEY=VALUE ...]\n"
+                   "CSV: area,nx,ny,nz,cx,cy,cz[,v0x,v0y,v0z,v1x,v1y,v1z,v2x,v2y,v2z]\n"
+                   "KEY: alpha_n sigma_t sigma_n alpha speed_ratio wall_temperature freestream_temperature\n"
+                   "     freestream_velocity reference_area reference_length cll_beta cll_gamma cll_delta cll_zeta\n";
       return 2;
     }
-    auto panels = read_csv(argv[1]);
-    adbsat::Parameters params; params.model = adbsat::parse_model(argv[2]);
+    auto panels = read_csv(pos[0]);
+    adbsat::Parameters params; params.model = adbsat::parse_model(pos[1]);
+    for (const auto& o : opts) apply_option(params, o);
     std::array<double,3> flow{-1.0,0.0,0.0};
-    if (argc >= 6) flow = {std::stod(argv[3]),std::stod(argv[4]),std::stod(argv[5])};
-    int reps = argc >= 7 ? std::max(1, std::stoi(argv[6])) : 1;
-    params.enable_shadowing = argc >= 8 && std::string(argv[7]) == "shadow";
+    if (pos.size() >= 5) flow = {std::stod(pos[2]),std::stod(pos[3]),std::stod(pos[4])};
+    int reps = pos.size() >= 6 ? std::max(1, std::stoi(pos[5])) : 1;
+    params.enable_shadowing = pos.size() >= 7 && pos[6] == "shadow";
     adbsat::Solver solver(panels);
     adbsat::Result result;
     for (int i=0; i<reps; ++i) result = solver.compute(params, flow, false);

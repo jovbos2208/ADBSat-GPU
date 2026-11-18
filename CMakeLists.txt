@@ -30,6 +30,9 @@ target_compile_options(adbsat_gpu PRIVATE $<$<CONFIG:Release>:-O3>)
 add_executable(adbsat-cli src/cli.cpp)
 target_link_libraries(adbsat-cli PRIVATE adbsat_gpu)
 
+add_executable(adbsat-batch src/batch.cpp)
+target_link_libraries(adbsat-batch PRIVATE adbsat_gpu)
+
 if(ADBSAT_BUILD_TESTS)
   enable_testing()
   add_executable(adbsat-tests tests/test_core.cpp)
@@ -44,5 +47,5 @@ if(ADBSAT_BUILD_BENCHMARKS)
   target_link_libraries(adbsat-shadow-benchmark PRIVATE adbsat_gpu)
 endif()
 
-install(TARGETS adbsat_gpu adbsat-cli)
+install(TARGETS adbsat_gpu adbsat-cli adbsat-batch)
 install(DIRECTORY include/ DESTINATION include)
